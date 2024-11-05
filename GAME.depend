@@ -1,10 +1,16 @@
 # depslib dependency file v1.0
-1730657169 source:/home/hossain/Desktop/MultiplayerShooterGame/GAME/main.cpp
+1730818979 source:/home/hossain/Desktop/MultiplayerShooterGame/GAME/main.cpp
 	<SFML/Graphics.hpp>
+	<SFML/Network.hpp>
 	<iostream>
 	<cstdlib>
 	<ctime>
 	<cmath>
+	<string>
+	<sstream>
+	<thread>
+	<unistd.h>
+	<string.h>
 
 1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Graphics.hpp
 	<SFML/Window.hpp>
@@ -423,4 +429,79 @@
 	<SFML/Graphics/PrimitiveType.hpp>
 	<SFML/Graphics/Drawable.hpp>
 	<SFML/Window/GlResource.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network.hpp
+	<SFML/System.hpp>
+	<SFML/Network/Ftp.hpp>
+	<SFML/Network/Http.hpp>
+	<SFML/Network/IpAddress.hpp>
+	<SFML/Network/Packet.hpp>
+	<SFML/Network/Socket.hpp>
+	<SFML/Network/SocketHandle.hpp>
+	<SFML/Network/SocketSelector.hpp>
+	<SFML/Network/TcpListener.hpp>
+	<SFML/Network/TcpSocket.hpp>
+	<SFML/Network/UdpSocket.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/Ftp.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/TcpSocket.hpp>
+	<SFML/System/NonCopyable.hpp>
+	<SFML/System/Time.hpp>
+	<string>
+	<vector>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/Export.hpp
+	<SFML/Config.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/TcpSocket.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/Socket.hpp>
+	<SFML/System/Time.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/Socket.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/SocketHandle.hpp>
+	<SFML/System/NonCopyable.hpp>
+	<vector>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/SocketHandle.hpp
+	<SFML/Config.hpp>
+	<basetsd.h>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/Http.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/IpAddress.hpp>
+	<SFML/Network/TcpSocket.hpp>
+	<SFML/System/NonCopyable.hpp>
+	<SFML/System/Time.hpp>
+	<map>
+	<string>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/IpAddress.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/System/Time.hpp>
+	<istream>
+	<ostream>
+	<string>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/Packet.hpp
+	<SFML/Network/Export.hpp>
+	<string>
+	<vector>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/SocketSelector.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/System/Time.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/TcpListener.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/Socket.hpp>
+	<SFML/Network/IpAddress.hpp>
+
+1699094177 /home/hossain/Desktop/MultiplayerShooterGame/SFML-2.6.1/include/SFML/Network/UdpSocket.hpp
+	<SFML/Network/Export.hpp>
+	<SFML/Network/Socket.hpp>
+	<SFML/Network/IpAddress.hpp>
+	<vector>
 
