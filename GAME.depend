@@ -1,10 +1,10 @@
 # depslib dependency file v1.0
-1730818979 source:/home/hossain/Desktop/MultiplayerShooterGame/GAME/main.cpp
+1730844740 source:/home/hossain/Desktop/MultiplayerShooterGame/GAME/main.cpp
 	<SFML/Graphics.hpp>
 	<SFML/Network.hpp>
 	<iostream>
 	<cstdlib>
-	<ctime>
+	<time.h>
 	<cmath>
 	<string>
 	<sstream>

@@ -2,7 +2,7 @@
 #include <SFML/Network.hpp>
 #include <iostream>
 #include <cstdlib>
-#include <ctime>
+#include <time.h>
 #include <cmath>
 #include <string>
 #include <sstream>
@@ -19,7 +19,8 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-#define NUM_OF_BLOCK 20
+#define NUM_OF_BLOCK 40
+#define NUM_OF_BULLET 10
 
 
 float distance(sf::Vector2f p1, sf::Vector2f p2)
@@ -107,19 +108,19 @@ public:
         for(short x=1; x<WIDTH/GRID; x++)
         {
             verticalLines[x-1][0].position = origin + sf::Vector2f(x*GRID, 0);
-            verticalLines[x-1][0].color = sf::Color::Red;
+            verticalLines[x-1][0].color = sf::Color::Black;
 
             verticalLines[x-1][1].position = origin + sf::Vector2f(x*GRID, HEIGHT);
-            verticalLines[x-1][1].color = sf::Color::Red;
+            verticalLines[x-1][1].color = sf::Color::Black;
         }
 
         for(short y=1; y<HEIGHT/GRID; y++)
         {
             horizontalLines[y-1][0].position = origin + sf::Vector2f(0, y*GRID);
-            horizontalLines[y-1][0].color = sf::Color::Red;
+            horizontalLines[y-1][0].color = sf::Color::Black;
 
             horizontalLines[y-1][1].position = origin + sf::Vector2f(WIDTH, y*GRID);
-            horizontalLines[y-1][1].color = sf::Color::Red;
+            horizontalLines[y-1][1].color = sf::Color::Black;
         }
     }
 
@@ -151,7 +152,7 @@ public:
 
     Block()
     {
-        setFillColor(sf::Color(0,0,255));
+        setFillColor(sf::Color(21, 97, 200));
     }
 
 
@@ -173,12 +174,45 @@ public:
 };
 
 
+float bulletVelocity = 0.07;
+
+class Bullet: public sf::CircleShape
+{
+public:
+
+    float angle;
+    int xSign = 1;
+    int ySign = 1;
+
+    Bullet()
+    {
+        setFillColor(sf::Color::Red);
+        setRadius(5);
+    }
+
+    void fly()
+    {
+        float dx = xSign * bulletVelocity * std::cos(3.1416/180*angle);
+        float dy = ySign * bulletVelocity * std::sin(3.1416/180*angle);
+        setPosition(getPosition()+sf::Vector2f(dx,dy));
+    }
+};
+
+
+
+
 
 class Player: public sf::CircleShape
 {
 public:
 
     sf::Vector2i relativePosition;
+    sf::RectangleShape gun;
+
+    Bullet bullets[NUM_OF_BULLET];
+    int bulletCount=0;
+    int bulletIndex=0;
+
 
     void setRelativePosition(sf::Vector2f p)
     {
@@ -194,8 +228,24 @@ public:
     Player()
     {
         setRadius( 10 );
-        setFillColor( sf::Color(255,255,0) );
+        setFillColor( sf::Color::Yellow );
         setPosition( WINDOW_WIDTH/2-getRadius(), WINDOW_HEIGHT/2-getRadius() );
+
+
+
+        relativePosition.x = WINDOW_WIDTH/2-10;//radius
+        relativePosition.y = WINDOW_HEIGHT/2-10;
+
+        gun.setFillColor(sf::Color::Black);
+        gun.setSize(sf::Vector2f(16,4));
+        gun.setPosition(WINDOW_WIDTH/2, WINDOW_HEIGHT/2-2);
+        gun.setOrigin( sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2) - gun.getPosition());
+    }
+
+    void drawOn(sf::RenderWindow &window)
+    {
+        window.draw(*(this));
+        window.draw(gun);
     }
 };
 
@@ -219,7 +269,7 @@ public:
     World()
     {
         setSize(sf::Vector2f(WIDTH, HEIGHT));
-        setFillColor(sf::Color(255,127,7));
+        setFillColor(sf::Color(232, 140, 50));
 
         grid.makeGrid(getPosition());
 
@@ -227,6 +277,7 @@ public:
 
         player2.setFillColor(sf::Color::Green);
 
+        srand(time(NULL));
         for(short i=0; i<NUM_OF_BLOCK; i++)
         {
             int blockLengthInGrid = randomInt(4,12);
@@ -238,14 +289,14 @@ public:
                 if (randomInt(0,1))
                 {
                     blockSizeInGrid.x = blockLengthInGrid;
-                    blockSizeInGrid.y = 1;
+                    blockSizeInGrid.y = 2;
 
                     blockPositionInGrid.x = randomInt(1, WIDTH/GRID - blockLengthInGrid - 1);
                     blockPositionInGrid.y = randomInt(1, HEIGHT/GRID - 1 - 1);
                 }
                 else
                 {
-                    blockSizeInGrid.x = 1;
+                    blockSizeInGrid.x = 2;
                     blockSizeInGrid.y = blockLengthInGrid;
 
                     blockPositionInGrid.x = randomInt(0, WIDTH/GRID - 1 -1);
@@ -258,7 +309,7 @@ public:
                 sf::Vector2f blockSize = sf::Vector2f(blockSizeInGrid.x*GRID, blockSizeInGrid.y*GRID);
 
                 sf::Vector2f center = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
-                float radius = 10;
+                float radius = 20;
 
                 float x1 = blockAbsolutePosition.x;
                 float x2 = blockAbsolutePosition.x + blockSize.x;
@@ -294,6 +345,9 @@ public:
         }
 
         player.setRelativePosition( player.getRelativePosition() + d );
+
+        player2.setPosition( player2.getRelativePosition() + getPosition() );
+        player2.gun.setPosition( player2.getPosition()+sf::Vector2f(10,8) );
     }
 
 
@@ -322,8 +376,8 @@ public:
             window.draw(blocks[i]);
         }
 
-        window.draw(player);
-        window.draw(player2);
+        player2.drawOn(window);
+        player.drawOn(window);
     }
 };
 
@@ -339,11 +393,11 @@ public:
     AimLine(sf::WindowBase &window)
     {
         line[0].position = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
-        line[0].color = sf::Color::Green;
+        line[0].color = sf::Color::Yellow;
 
         sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
         line[1].position = sf::Vector2f(mousePosition.x, mousePosition.y);
-        line[1].color = sf::Color::Green;
+        line[1].color = sf::Color::Yellow;
     }
 
 
@@ -440,6 +494,14 @@ public:
                 }
             }
         }
+
+
+        float angle = 180/3.1416*std::atan2(mousePosition.y-WINDOW_HEIGHT/2,mousePosition.x-WINDOW_WIDTH/2);
+
+        world.player.gun.rotate( angle -world.player.gun.getRotation());
+
+
+
     }
 
     void drawOn(sf::RenderWindow &window)
@@ -471,7 +533,7 @@ public:
         this->scale_factor = height/HEIGHT;
         this->width = WIDTH*scale_factor;
 
-        setFillColor(world.getFillColor());
+        setFillColor(sf::Color(230, 130, 40));
         setPosition(WINDOW_WIDTH-width-50,50);
         setSize(sf::Vector2f(width,height));
         setOutlineColor(sf::Color::Black);
@@ -532,22 +594,26 @@ typedef struct x
     int id;
     int x;
     int y;
+    float gunAngle;
+
 } Position;
 
 
 
-bool parse(char buffer[31], Position *p1, Position *p2)
+bool parse(char buffer[36], Position *p1, Position *p2)
 {
     int temp;
 
-    int index=1;
+    int index=0;
 
     int sum;
 
-    if (buffer[0]!=';' )
+    if (buffer[index]!=';' )
     {
-        p1->id = buffer[0] - '0';
 
+        p1->id = buffer[index] - '0';
+
+        index+=1;
         while(buffer[index]!=',')
         {
             index++;
@@ -568,7 +634,7 @@ bool parse(char buffer[31], Position *p1, Position *p2)
 
         index+=1;
         temp = index;
-        while(buffer[index]!='_')
+        while(buffer[index]!=',')
         {
             index++;
         }
@@ -586,6 +652,28 @@ bool parse(char buffer[31], Position *p1, Position *p2)
         }
         p1->y = sum;
 
+        index+=1;
+        temp = index;
+        while(buffer[index]!='_')
+        {
+            index++;
+        }
+        sum = 0;
+        for (int i=index-1; i>=temp; i--)
+        {
+            int digit = buffer[i] - '0';
+
+            for (int j=0; j<index-i-1; j++)
+            {
+                digit*=10;
+            }
+
+            sum+=digit;
+        }
+        p1->gunAngle = sum;
+
+
+
         while(buffer[index]=='_')
         {
             index++;
@@ -593,53 +681,74 @@ bool parse(char buffer[31], Position *p1, Position *p2)
 
 
         printf("%c", buffer[index]);
+    }
 
-        if (buffer[index]!=';')
+    if (buffer[index]!=';')
+    {
+        p2->id = buffer[index] - '0';
+
+        index+=1;
+        temp = index;
+        while(buffer[index]!=',')
         {
-            p2->id = buffer[index] - '0';
-
-            index+=1;
-            temp = index;
-            while(buffer[index]!=',')
-            {
-                index++;
-            }
-            sum = 0;
-            for (int i=index-1; i>=temp; i--)
-            {
-                int digit = buffer[i] - '0';
-
-                for (int j=0; j<index-i-1; j++)
-                {
-                    digit*=10;
-                }
-
-                sum+=digit;
-            }
-            p2->x = sum;
-
-            index+=1;
-            temp=index;
-            while(buffer[index]!='_')
-            {
-                index++;
-            }
-            sum = 0;
-            for (int i=index-1; i>=temp; i--)
-            {
-                int digit = buffer[i] - '0';
-
-                for (int j=0; j<index-i-1; j++)
-                {
-                    digit*=10;
-                }
-
-                sum+=digit;
-            }
-            p2->y = sum;
-
-            return true;
+            index++;
         }
+        sum = 0;
+        for (int i=index-1; i>=temp; i--)
+        {
+            int digit = buffer[i] - '0';
+
+            for (int j=0; j<index-i-1; j++)
+            {
+                digit*=10;
+            }
+
+            sum+=digit;
+        }
+        p2->x = sum;
+
+        index+=1;
+        temp=index;
+        while(buffer[index]!=',')
+        {
+            index++;
+        }
+        sum = 0;
+        for (int i=index-1; i>=temp; i--)
+        {
+            int digit = buffer[i] - '0';
+
+            for (int j=0; j<index-i-1; j++)
+            {
+                digit*=10;
+            }
+
+            sum+=digit;
+        }
+        p2->y = sum;
+
+
+        index+=1;
+        temp = index;
+        while(buffer[index]!='_')
+        {
+            index++;
+        }
+        sum = 0;
+        for (int i=index-1; i>=temp; i--)
+        {
+            int digit = buffer[i] - '0';
+
+            for (int j=0; j<index-i-1; j++)
+            {
+                digit*=10;
+            }
+
+            sum+=digit;
+        }
+        p2->gunAngle = sum;
+
+        return true;
     }
     return false;
 }
@@ -660,6 +769,12 @@ void update(World *world, MiniWorld *miniWorld, Position p)
 
     float scale_factor = miniWorld->scale_factor;
     miniWorld->miniPlayer2.setPosition( miniWorld->getPosition() + sf::Vector2f(p.x * scale_factor, p.y * scale_factor) );
+
+
+    sf::Vector2f player2Position = world->player2.getPosition();
+    world->player2.gun.setPosition(player2Position.x+10,player2Position.y+10);
+
+    world->player2.gun.rotate(p.gunAngle-world->player2.gun.getRotation());
 }
 
 int id=1;
@@ -670,7 +785,7 @@ void receive(sf::TcpSocket *socket)
 
     while(true)
     {
-        char buffer[31];
+        char buffer[36];
         socket->receive(buffer, sizeof(buffer), received);
 
         if(received>0)
@@ -691,10 +806,10 @@ void receive(sf::TcpSocket *socket)
     }
 }
 
+int v=10;
 
 int main()
 {
-srand(static_cast <unsigned int> (time(0)));
 
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "ShooterGame");
 
@@ -718,14 +833,45 @@ srand(static_cast <unsigned int> (time(0)));
             if (event.type == sf::Event::Closed)
                 window.close();
 
+
+            if (event.type == sf::Event::MouseButtonPressed)
+            {
+
+                int indx;
+
+                indx = world.player.bulletIndex + world.player.bulletCount;
+                indx = (indx >= NUM_OF_BULLET) ? indx - NUM_OF_BULLET : indx ;
+
+
+                sf::Vector2i m = sf::Mouse::getPosition(window);
+
+                float angle = 180 / 3.1416 * std::atan2(WINDOW_HEIGHT/2-m.y,WINDOW_WIDTH/2-m.x) + 180;
+
+                world.player.bullets[indx].angle = angle;
+                float startX = WINDOW_WIDTH/2 + 15 * std::cos(3.1416/180*angle);
+                float startY = WINDOW_HEIGHT/2 + 15 * std::sin(3.1416/180*angle);
+                world.player.bullets[indx].setPosition(sf::Vector2f(startX,startY));
+
+                if(world.player.bulletCount < NUM_OF_BULLET)
+                {
+                    world.player.bulletCount++;
+                }
+
+            }
+
+
+
+
+
+
             if(event.type == sf::Event::KeyPressed)
             {
                 bool collision = false;
 
                 if(event.key.code == sf::Keyboard::Left)
                 {
-                    world.update( sf::Vector2f(-10, 0) );
-                    miniWorld.update( sf::Vector2f(-10, 0) );
+                    world.update( sf::Vector2f(-v, 0) );
+                    miniWorld.update( sf::Vector2f(-v, 0) );
 
                     for (short i=0; i<NUM_OF_BLOCK; i++)
                     {
@@ -734,8 +880,8 @@ srand(static_cast <unsigned int> (time(0)));
 
                         if (checkCollision(blockAbsolutePosition, blockSize))
                         {   collision = true;
-                            world.update( sf::Vector2f(10, 0) );
-                            miniWorld.update( sf::Vector2f(10, 0) );
+                            world.update( sf::Vector2f(v, 0) );
+                            miniWorld.update( sf::Vector2f(v, 0) );
                             break;
                         }
                     }
@@ -753,8 +899,8 @@ srand(static_cast <unsigned int> (time(0)));
 
                         if (checkCollision(blockAbsolutePosition, blockSize))
                         {   collision = true;
-                            world.update( sf::Vector2f(-10, 0) );
-                            miniWorld.update( sf::Vector2f(-10, 0) );
+                            world.update( sf::Vector2f(-v, 0) );
+                            miniWorld.update( sf::Vector2f(-v, 0) );
                             break;
                         }
                     }
@@ -772,8 +918,8 @@ srand(static_cast <unsigned int> (time(0)));
 
                         if (checkCollision(blockAbsolutePosition, blockSize))
                         {   collision = true;
-                            world.update( sf::Vector2f(0, 10) );
-                            miniWorld.update( sf::Vector2f(0, 10) );
+                            world.update( sf::Vector2f(0, v) );
+                            miniWorld.update( sf::Vector2f(0, v) );
                             break;
                         }
                     }
@@ -791,14 +937,20 @@ srand(static_cast <unsigned int> (time(0)));
 
                         if (checkCollision(blockAbsolutePosition, blockSize))
                         {   collision = true;
-                            world.update( sf::Vector2f(0, -10) );
-                            miniWorld.update( sf::Vector2f(0, -10) );
+                            world.update( sf::Vector2f(0, -v) );
+                            miniWorld.update( sf::Vector2f(0, -v) );
                             break;
                         }
                     }
                 }
 
+            }
 
+
+
+            aimLine.updateLine(window, world);
+
+            /// DO YOUR WORK HERE ///
 
                 // SENDING MESSAGE
                 std::string s = std::to_string(id);
@@ -806,23 +958,102 @@ srand(static_cast <unsigned int> (time(0)));
                 s += std::to_string(world.player.relativePosition.x);
                 s += ",";
                 s += std::to_string(world.player.relativePosition.y);
+                s += ",";
+
+                sf::Vector2i m = sf::Mouse::getPosition(window);
+
+                s += std::to_string( (int) ( 180 / 3.1416 * std::atan2(WINDOW_HEIGHT/2-m.y,WINDOW_WIDTH/2-m.x) + 180 ) );
                 s += "E";
                 socket.send(s.c_str(), s.size() + 1);
+                //std::cout << s << std::endl;
+        }
 
+        for(int i=world.player.bulletIndex; i < world.player.bulletIndex + world.player.bulletCount; i++)
+        {
+            if(i >= NUM_OF_BULLET){ i = i - NUM_OF_BULLET; }
+
+            world.player.bullets[i].fly();
+
+            sf::Vector2f bulletPosition = world.player.bullets[i].getPosition() + sf::Vector2f(3,3);
+
+            bool collision = false;
+
+            for (int j=0; j<NUM_OF_BLOCK; j++)
+            {
+                sf::Vector2f p = world.blocks[j].getPosition();
+                sf::Vector2f s = world.blocks[j].getSize();
+
+                float x1 = p.x;
+                float y1 = p.y;
+                float x2 = p.x + s.x;
+                float y2 = p.y + s.y;
+
+                if(
+                    ( 0 < x1 && x1 < WINDOW_WIDTH ) ||
+                    ( 0 < x2 && x2 < WINDOW_WIDTH ) ||
+                    ( 0 < y1 && y1 < WINDOW_HEIGHT ) ||
+                    ( 0 < y2 && y2 < WINDOW_HEIGHT )
+                  )
+                {
+                    if(x1 <= bulletPosition.x && bulletPosition.x <= x2 && y1 <= bulletPosition.y && bulletPosition.y <= y2)
+                    {
+                        collision = true;
+                    }
+
+                }
             }
 
-            aimLine.updateLine(window, world);
 
-            /// DO YOUR WORK HERE ///
+            bool hit = false;
+
+            if
+            (
+                distance
+                (
+                    bulletPosition + sf::Vector2f(3,3),
+                    world.player2.getPosition() + sf::Vector2f(10,10)
+                ) < 13
+            )
+            {
+                std::cout << "AH!" << std::endl;
+                hit = true;
+            }
+
+
+
+            if
+            (
+                (bulletPosition.x<0 || bulletPosition.x>WINDOW_WIDTH || bulletPosition.y<0 || bulletPosition.y>WINDOW_HEIGHT)
+                || collision
+                || hit
+            )
+            {
+                world.player.bulletIndex++;
+                world.player.bulletCount--;
+                if(world.player.bulletIndex == NUM_OF_BULLET)
+                {
+                    world.player.bulletIndex=0;
+                }
+            }
+
 
 
 
         }
 
 
+
         window.clear(sf::Color(50,50,50));
         world.drawOn(window);
-        aimLine.drawOn(window);
+        //aimLine.drawOn(window);
+
+        for(int i=world.player.bulletIndex; i < world.player.bulletIndex + world.player.bulletCount; i++)
+        {
+            if(i >= NUM_OF_BULLET){ i = i - NUM_OF_BULLET; }
+
+            window.draw(world.player.bullets[i]);
+        }
+
         miniWorld.drawOn(window);
         window.display();
     }
