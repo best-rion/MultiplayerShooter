@@ -19,11 +19,12 @@
 
 #define NUM_OF_BLOCK 40
 #define NUM_OF_BULLET 10
-#define ID 0
 
-int id = ID;
+#define ID 0
+#define RADIUS 10
+
 int v = 10;
-float bulletVelocity = 0.05;
+float bulletVelocity = 5;
 
 
 float distance(sf::Vector2f p1, sf::Vector2f p2)
@@ -36,60 +37,6 @@ float distance(sf::Vector2f p1, sf::Vector2f p2)
 int randomInt(int min, int max)
 {
     return rand()%(max-min + 1) + min;
-}
-
-
-
-bool checkCollision(sf::Vector2f blockPosition, sf::Vector2f blockSize)
-{
-    float x1 = blockPosition.x;
-    float x2 = blockPosition.x + blockSize.x;
-    float y1 = blockPosition.y;
-    float y2 = blockPosition.y + blockSize.y;
-
-    sf::Vector2f center = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
-    float radius = 10;
-
-    float dx1 = std::abs(x1 - WINDOW_WIDTH/2); //(center of player)
-    float dx2 = std::abs(x2 - WINDOW_WIDTH/2);
-    float dy1 = std::abs(y1 - WINDOW_HEIGHT/2);
-    float dy2 = std::abs(y2 - WINDOW_HEIGHT/2);
-
-    if
-    (
-        ( center.x <= x1 - radius && center.y <= y1 - radius ) ||
-        ( center.x <= x1 - radius && center.y >= y2 + radius ) ||
-        ( center.x >= x2 + radius && center.y >= y2 + radius ) ||
-        ( center.x >= x2 + radius && center.y <= y1 - radius )
-    )
-    {
-        return false;
-    }
-
-    if
-    (
-        ( (x1 < center.x && center.x < x2) && (dy1 < radius || dy2 < radius) )
-        ||
-        ( (y1 < center.y && center.y < y2) && (dx1 < radius || dx2 < radius) )
-    )
-    {
-        return true;
-    }
-
-    if (
-        ( ( x1-radius <= center.x && center.x <= x1 && y1-radius <= center.y && center.y <= y1) && ( distance(sf::Vector2f(x1,y1),center) < radius ) )
-        ||
-        ( ( x2 <= center.x && center.x <= x2+radius && y1-radius <= center.y && center.y <= y1) && ( distance(sf::Vector2f(x2,y1),center) < radius ) )
-        ||
-        ( ( x2 <= center.x && center.x <= x2+radius && y2 <= center.y && center.y <= y2+radius) && ( distance(sf::Vector2f(x2,y2),center) < radius ) )
-        ||
-        ( ( x1-radius <= center.x && center.x <= x1 && y2 <= center.y && center.y <= y2+radius) && ( distance(sf::Vector2f(x1,y2),center) < radius ) )
-       )
-    {
-        return true;
-    }
-
-    return false;
 }
 
 
@@ -650,6 +597,9 @@ bool parse(char buffer[36], PlayerInfo* p1, PlayerInfo* p2)
         {
             p1->click = true;
         }
+        else{
+            p1->click = false;
+        }
         index+=1;
 
         while(buffer[index]=='_')
@@ -657,8 +607,10 @@ bool parse(char buffer[36], PlayerInfo* p1, PlayerInfo* p2)
             index++;
         }
 
-
         printf("%c", buffer[index]);
+
+
+        return true;
     }
 
     if (buffer[index]!=';')
@@ -731,8 +683,9 @@ bool parse(char buffer[36], PlayerInfo* p1, PlayerInfo* p2)
         {
             p2->click = true;
         }
-
-        return true;
+        else{
+            p2->click = false;
+        }
     }
     return false;
 }
@@ -746,12 +699,70 @@ World world;
 MiniWorld miniWorld(world);
 
 
+bool checkCollision(sf::Vector2f &p)
+{
+    for (int i=0; i<NUM_OF_BLOCK; i++)
+    {
+        sf::Vector2f blockPosition = world.blocks[i].relativePosition;
+        sf::Vector2f blockSize = world.blocks[i].getSize();
+
+        float x1 = blockPosition.x;
+        float x2 = blockPosition.x + blockSize.x;
+        float y1 = blockPosition.y;
+        float y2 = blockPosition.y + blockSize.y;
+
+        sf::Vector2f center = p + sf::Vector2f(RADIUS,RADIUS);
+
+        float dx1 = std::abs(x1 - center.x);
+        float dx2 = std::abs(x2 - center.x);
+        float dy1 = std::abs(y1 - center.y);
+        float dy2 = std::abs(y2 - center.y);
+
+        if
+        (
+            ( center.x <= x1 - RADIUS && center.y <= y1 - RADIUS ) ||
+            ( center.x <= x1 - RADIUS && center.y >= y2 + RADIUS ) ||
+            ( center.x >= x2 + RADIUS && center.y >= y2 + RADIUS ) ||
+            ( center.x >= x2 + RADIUS && center.y <= y1 - RADIUS )
+        )
+        {
+            continue;
+        }
+
+        if
+        (
+            ( (x1 < center.x && center.x < x2) && (dy1 < RADIUS || dy2 < RADIUS) )
+            ||
+            ( (y1 < center.y && center.y < y2) && (dx1 < RADIUS || dx2 < RADIUS) )
+        )
+        {
+            return true;
+        }
+
+        if (
+            ( ( x1-RADIUS <= center.x && center.x <= x1 && y1-RADIUS <= center.y && center.y <= y1) && ( distance(sf::Vector2f(x1,y1),center) < RADIUS ) )
+            ||
+            ( ( x2 <= center.x && center.x <= x2+RADIUS && y1-RADIUS <= center.y && center.y <= y1) && ( distance(sf::Vector2f(x2,y1),center) < RADIUS ) )
+            ||
+            ( ( x2 <= center.x && center.x <= x2+RADIUS && y2 <= center.y && center.y <= y2+RADIUS) && ( distance(sf::Vector2f(x2,y2),center) < RADIUS ) )
+            ||
+            ( ( x1-RADIUS <= center.x && center.x <= x1 && y2 <= center.y && center.y <= y2+RADIUS) && ( distance(sf::Vector2f(x1,y2),center) < RADIUS ) )
+           )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
 
 void update(World *world, MiniWorld *miniWorld, PlayerInfo p)
 {
     for (int i=0; i<2; i++)
     {
-        if (i != id)
+        if (i != ID)
         {
             world->player[1].setPosition( sf::Vector2f(p.x, p.y) + world->getPosition() );
 
@@ -772,31 +783,25 @@ void update(World *world, MiniWorld *miniWorld, PlayerInfo p)
 }
 
 
-void receive(sf::TcpSocket *socket)
+typedef struct
+{
+sf::TcpSocket* socketPtr;
+sf::RenderWindow* windowPtr;
+
+} Arg;
+
+
+
+void receive(Arg* arg)
 {
     while (true)
     {
-        char buffer[36];
-        std::size_t received = 0;
-        socket->receive(buffer, sizeof(buffer), received);
 
-        if(received>0)
-        {
-            std::cout << "The server said: " << buffer << std::endl;
-
-            if (parse(buffer, &playerInfo[0], &playerInfo[1]))
-            {
-                for( int i=0; i<2; i++)
-                {
-                    if (playerInfo[i].id != id)
-                    {
-                        update(&world, &miniWorld, playerInfo[i]);
-                    }
-                }
-            }
-        }
     }
 }
+
+
+
 
 
 int main()
@@ -810,121 +815,78 @@ int main()
     sf::TcpSocket socket;
     socket.connect("10.18.119.86", 8080);
 
-    sf::TcpSocket* socketPtr = &socket;
-    sf::Thread th(&receive, socketPtr);
+    Arg arg;
+    arg.socketPtr = &socket;
+    arg.windowPtr = &window;
+
+    sf::Thread th(&receive, &arg);
     th.launch();
 
 
+    sf::Vector2f newRelativePosition = world.player[ID].getRelativePosition();
+
+    int c=0;
     while (window.isOpen())
     {
         sf::Event event;
         while (window.pollEvent(event))
         {
-            int clickCount = 0;
-
             if (event.type == sf::Event::Closed)
                 window.close();
 
 
             if (event.type == sf::Event::MouseButtonPressed)
             {
-                clickCount++;
-
-                int indx;
-                indx = world.player[ID].bulletIndex + world.player[ID].bulletCount;
-                indx = (indx >= NUM_OF_BULLET) ? indx - NUM_OF_BULLET : indx ;
-
-                sf::Vector2i m = sf::Mouse::getPosition(window);
-
-                float angle = 180 / 3.1416 * std::atan2(WINDOW_HEIGHT/2-m.y,WINDOW_WIDTH/2-m.x) + 180;
-
-                world.player[ID].bullets[indx].angle = angle;
-                float startX = WINDOW_WIDTH/2 + 10 * std::cos(3.1416/180*angle);
-                float startY = WINDOW_HEIGHT/2 + 10 * std::sin(3.1416/180*angle);
-                world.player[ID].bullets[indx].setPosition(sf::Vector2f(startX,startY));
-
-                if(world.player[ID].bulletCount < NUM_OF_BULLET)
-                {
-                    world.player[ID].bulletCount++;
-                }
+                c=1;
+            }
+            if (event.type == sf::Event::MouseButtonReleased)
+            {
+                c=0;
             }
 
 
             if(event.type == sf::Event::KeyPressed)
             {
+                sf::Vector2f playerTestPosition;
+                sf::Vector2f d;
+
                 if(event.key.code == sf::Keyboard::Left)
                 {
-                    world.update( sf::Vector2f(-v, 0) );
-                    miniWorld.update( sf::Vector2f(-v, 0) );
-
-                    for (short i=0; i<NUM_OF_BLOCK; i++)
+                    d = sf::Vector2f(-v, 0);
+                    playerTestPosition = world.player[ID].getRelativePosition() + d;
+                    if ( !checkCollision( playerTestPosition ) )
                     {
-                        sf::Vector2f blockAbsolutePosition = world.blocks[i].getPosition();
-                        sf::Vector2f blockSize = world.blocks[i].getSize();
-
-                        if (checkCollision(blockAbsolutePosition, blockSize))
-                        {
-                            world.update( sf::Vector2f(v, 0) );
-                            miniWorld.update( sf::Vector2f(v, 0) );
-                            break;
-                        }
+                        newRelativePosition = world.player[ID].getRelativePosition() + d ;
                     }
                 }
 
                 if(event.key.code == sf::Keyboard::Right)
                 {
-                    world.update( sf::Vector2f(10, 0) );
-                    miniWorld.update( sf::Vector2f(10, 0) );
-
-                    for (short i=0; i<NUM_OF_BLOCK; i++)
+                    d = sf::Vector2f(v, 0);
+                    playerTestPosition = world.player[ID].getRelativePosition() + d;
+                    if ( !checkCollision( playerTestPosition ) )
                     {
-                        sf::Vector2f blockAbsolutePosition = world.blocks[i].getPosition();
-                        sf::Vector2f blockSize = world.blocks[i].getSize();
-
-                        if (checkCollision(blockAbsolutePosition, blockSize))
-                        {
-                            world.update( sf::Vector2f(-v, 0) );
-                            miniWorld.update( sf::Vector2f(-v, 0) );
-                            break;
-                        }
+                        newRelativePosition = world.player[ID].getRelativePosition() + d ;
                     }
                 }
 
                 if(event.key.code == sf::Keyboard::Up)
                 {
-                    world.update( sf::Vector2f(0, -10) );
-                    miniWorld.update( sf::Vector2f(0, -10) );
-
-                    for (short i=0; i<NUM_OF_BLOCK; i++)
+                    d = sf::Vector2f(0, -v);
+                    playerTestPosition = world.player[ID].getRelativePosition() + d;
+                    if ( !checkCollision( playerTestPosition ) )
                     {
-                        sf::Vector2f blockAbsolutePosition = world.blocks[i].getPosition();
-                        sf::Vector2f blockSize = world.blocks[i].getSize();
-
-                        if (checkCollision(blockAbsolutePosition, blockSize))
-                        {
-                            world.update( sf::Vector2f(0, v) );
-                            miniWorld.update( sf::Vector2f(0, v) );
-                            break;
-                        }
+                        newRelativePosition = world.player[ID].getRelativePosition() + d ;
                     }
                 }
 
                 if(event.key.code == sf::Keyboard::Down)
                 {
-                    world.update( sf::Vector2f(0, 10) );
-                    miniWorld.update( sf::Vector2f(0, 10) );
-
-                    for (short i=0; i<NUM_OF_BLOCK; i++)
+                    d = sf::Vector2f(0, v);
+                    playerTestPosition = world.player[ID].getRelativePosition() + d;
+                    if ( !checkCollision( playerTestPosition ) )
                     {
-                        sf::Vector2f blockAbsolutePosition = world.blocks[i].getPosition();
-                        sf::Vector2f blockSize = world.blocks[i].getSize();
-
-                        if (checkCollision(blockAbsolutePosition, blockSize))
-                        {
-                            world.update( sf::Vector2f(0, -v) );
-                            miniWorld.update( sf::Vector2f(0, -v) );
-                            break;
-                        }
+                        newRelativePosition = world.player[ID].getRelativePosition() + d ;
                     }
                 }
             }
@@ -936,23 +898,62 @@ int main()
 
 
             // SENDING MESSAGE
-            std::string s = std::to_string(id);
+            std::string s = std::to_string(ID);
             s += "S";
-            s += std::to_string(world.player[ID].relativePosition.x);
+            s += std::to_string((int) newRelativePosition.x);
             s += ",";
-            s += std::to_string(world.player[ID].relativePosition.y);
+            s += std::to_string((int) newRelativePosition.y);
             s += ",";
 
             sf::Vector2i m = sf::Mouse::getPosition(window);
 
             s += std::to_string( (int) ( 180 / 3.1416 * std::atan2( WINDOW_HEIGHT/2 - m.y, WINDOW_WIDTH/2 - m.x ) + 180 ) );
             s += ",";
-            s += std::to_string(clickCount);
+            s += std::to_string(c);
             s += "E";
             socket.send(s.c_str(), s.size() + 1);
             std::cout << s << std::endl;
         }
 
+
+
+
+        char buffer[36];
+        std::size_t received = 0;
+        //arg->socketPtr->receive(buffer, sizeof(buffer), received);
+        socket.receive(buffer, sizeof(buffer), received);
+
+        if(received>0)
+        {
+            if (parse(buffer, &playerInfo[0], &playerInfo[1]))
+            {
+                std::cout << "The server said: " << buffer << std::endl;
+                for( int i=0; i<2; i++)
+                {
+                    if (playerInfo[i].id != ID)
+                    {
+                        update(&world, &miniWorld, playerInfo[i]);
+                    }
+                }
+            }
+        }
+
+
+
+        if(playerInfo[ID].click)
+        {
+            int indx;
+            indx = world.player[ID].bulletIndex + world.player[ID].bulletCount;
+            indx = (indx >= NUM_OF_BULLET) ? indx - NUM_OF_BULLET : indx ;
+
+            world.player[ID].bullets[indx].angle = playerInfo[ID].gunAngle;
+            world.player[ID].bullets[indx].setPosition( WINDOW_WIDTH/2 -4, WINDOW_HEIGHT/2 -4);
+
+            if(world.player[ID].bulletCount < NUM_OF_BULLET)
+            {
+                world.player[ID].bulletCount++;
+            }
+        }
 
 
         for(int i=world.player[ID].bulletIndex; i < world.player[ID].bulletIndex + world.player[ID].bulletCount; i++)
@@ -1022,6 +1023,18 @@ int main()
                 }
             }
         }
+
+
+
+
+        if (playerInfo[ID].x !=  world.player[ID].relativePosition.x || playerInfo[ID].y !=  world.player[ID].relativePosition.y)
+        {
+            world.update( sf::Vector2f(playerInfo[ID].x, playerInfo[ID].y) - world.player[ID].getRelativePosition() );
+            miniWorld.update( sf::Vector2f(playerInfo[ID].x, playerInfo[ID].y) - world.player[ID].getRelativePosition() );
+            world.player[ID].setRelativePosition( sf::Vector2f(playerInfo[ID].x, playerInfo[ID].y) );
+        }
+
+
 
         window.clear(sf::Color(50,50,50));
         world.drawOn(window);
