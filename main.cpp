@@ -3,27 +3,34 @@
 #include <cmath>
 #include <iostream>
 
-#define WINDOW_WIDTH 1024
+#define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 720
-#define WORLD_WIDTH 1280
-#define WORLD_HEIGHT 1000
+#define WORLD_WIDTH 2280
+#define WORLD_HEIGHT 2000
 #define GRID 20
-#define NUM_OF_BLOCKS 40
-#define NUM_OF_BULLETS 500
+#define NUM_OF_BLOCKS 100
+#define NUM_OF_BULLETS 50
 #define BULLET_RADIUS 4
 #define PLAYER_RADIUS 10
 #define TOTAL_PLAYERS 4
 
+#define DEAD_PLAYERS 3
+int numOfDeadPlayers = 0;
+int deadPlayers[DEAD_PLAYERS];
+
 int myId = 0;
 int numOfPlayers = 0;
 
-const sf::Vector2f window_center(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
-sf::Vector2f myRelPosition(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
-sf::Vector2i mousePosition;
-
+const float bulletVelocity = 15;
+const sf::Color gridLineColor = sf::Color(70,70,70);
+const sf::Color blockColor = sf::Color(120,120,120);
+const sf::Color worldColor = sf::Color(50, 50, 50);
 
 int playerVelocity = 10;
-float bulletVelocity = 15;
+sf::Vector2f window_center(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
+sf::Vector2f myRelPosition(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
+sf::Vector2i mousePosition;
+sf::Vector2f origin_global = sf::Vector2f(0,0); // Abs Position of World
 
 
 float distance(sf::Vector2f p1, sf::Vector2f p2)
@@ -42,34 +49,29 @@ class Grid
 {
 private:
 
-    sf::Vector2f origin;
     sf::Vertex verticalLines[WORLD_WIDTH/GRID-1][2];
     sf::Vertex horizontalLines[WORLD_HEIGHT/GRID-1][2];
 
-    sf::Color color = sf::Color(179, 78, 2);
-
 public:
 
-    void makeGrid( sf::Vector2f origin )
+    void makeGrid()
     {
-        this->origin = origin;
-
         for(short x=1; x<WORLD_WIDTH/GRID; x++)
         {
-            verticalLines[x-1][0].position = origin + sf::Vector2f(x*GRID, 0);
-            verticalLines[x-1][0].color = color;
+            verticalLines[x-1][0].position = origin_global + sf::Vector2f(x*GRID, 0);
+            verticalLines[x-1][0].color = gridLineColor;
 
-            verticalLines[x-1][1].position = origin + sf::Vector2f(x*GRID, WORLD_HEIGHT);
-            verticalLines[x-1][1].color = color;
+            verticalLines[x-1][1].position = origin_global + sf::Vector2f(x*GRID, WORLD_HEIGHT);
+            verticalLines[x-1][1].color = gridLineColor;
         }
 
         for(short y=1; y<WORLD_HEIGHT/GRID; y++)
         {
-            horizontalLines[y-1][0].position = origin + sf::Vector2f(0, y*GRID);
-            horizontalLines[y-1][0].color = color;
+            horizontalLines[y-1][0].position = origin_global + sf::Vector2f(0, y*GRID);
+            horizontalLines[y-1][0].color = gridLineColor;
 
-            horizontalLines[y-1][1].position = origin + sf::Vector2f(WORLD_WIDTH, y*GRID);
-            horizontalLines[y-1][1].color = color;
+            horizontalLines[y-1][1].position = origin_global + sf::Vector2f(WORLD_WIDTH, y*GRID);
+            horizontalLines[y-1][1].color = gridLineColor;
         }
     }
 
@@ -92,29 +94,35 @@ public:
 
 class Block: public sf::RectangleShape
 {
+private:
+
+    sf::Vector2f relPosition;
+
 public:
-
-    sf::Vector2f relativePosition;
-
 
     Block()
     {
-        setFillColor(sf::Color(18, 84, 179));
+        setFillColor(blockColor);
     }
 
 
-    void makeBlock(sf::Vector2f blockSize, sf::Vector2f absPosition, sf::Vector2f origin)
+    void makeBlock(sf::Vector2f blockSize, sf::Vector2f absPosition)
     {
-        relativePosition = absPosition - origin;
+        relPosition = absPosition - origin_global;
 
         setSize( blockSize );
         setPosition( absPosition );
     }
 
 
-    void updateBlock(sf::Vector2f origin)
+    void updateBlock()
     {
-        setPosition( origin.x + relativePosition.x , origin.y + relativePosition.y );
+        setPosition( origin_global.x + relPosition.x , origin_global.y + relPosition.y );
+    }
+
+    sf::Vector2f getRelativePosition()
+    {
+        return relPosition;
     }
 };
 
@@ -178,7 +186,7 @@ class Player: public sf::CircleShape
 {
 public:
 
-    float life = 1;
+    float life = 1.0;
     HealthBar healthBar;
 
     float gunAngle;
@@ -186,27 +194,33 @@ public:
 
     sf::RectangleShape gun;
     Bullet bullets[NUM_OF_BULLETS];
+
     int bulletCount=0;
     int bulletIndex=0;
 
     Player()
     {
         setRadius( PLAYER_RADIUS );
-        setFillColor( sf::Color::Yellow );
         setPosition( WINDOW_WIDTH/2 - PLAYER_RADIUS, WINDOW_HEIGHT/2 - PLAYER_RADIUS );
-        setOutlineColor( sf::Color::Yellow );
         setOutlineThickness( 2 );
 
         gun.setSize( sf::Vector2f(16,4) );
         gun.setFillColor( sf::Color::Black );
+        gun.setOutlineThickness(1);
+        gun.setOutlineColor(sf::Color::White);
         gun.setPosition( WINDOW_WIDTH/2, WINDOW_HEIGHT/2-2 );
         gun.setOrigin( sf::Vector2f( WINDOW_WIDTH/2, WINDOW_HEIGHT/2) - gun.getPosition() );
     }
 
-
-    void update(sf::Vector2f origin, sf::Vector2f p)
+    void setColor(sf::Color color)
     {
-        setPosition( origin + sf::Vector2f( p.x-PLAYER_RADIUS, p.y-PLAYER_RADIUS ) );
+        setFillColor( color );
+        setOutlineColor( color );
+    }
+
+    void update(sf::Vector2f relPosition)
+    {
+        setPosition( origin_global + sf::Vector2f( relPosition.x-PLAYER_RADIUS, relPosition.y-PLAYER_RADIUS ) );
     }
 
 
@@ -246,14 +260,17 @@ public:
     Player players[TOTAL_PLAYERS];
 
 
-    void playerInit()
+    void setPlayerColor()
     {
         for( int id=0; id < TOTAL_PLAYERS; id++)
         {
             if ( id != myId )
             {
-                players[ id ].setFillColor(sf::Color::Green);
-                players[ id ].setOutlineColor(sf::Color::Green);
+                players[ id ].setColor(sf::Color::Green);
+            }
+            else
+            {
+                players[ id ].setColor(sf::Color::Yellow);
             }
         }
     }
@@ -262,12 +279,12 @@ public:
     World()
     {
         setSize(sf::Vector2f(WORLD_WIDTH, WORLD_HEIGHT));
-        setFillColor(sf::Color(232, 140, 50));
+        setFillColor( worldColor );
         setPosition( 0, 0 );
 
-        grid.makeGrid( getPosition() );
+        grid.makeGrid();
 
-        srand(42);
+        srand(1);
         for(short i=0; i<NUM_OF_BLOCKS; i++)
         {
             int blockLengthInGrid = randomInt(4,12);
@@ -298,7 +315,7 @@ public:
 
                 //CHECK
 
-                blockAbsPosition = getPosition() + sf::Vector2f(blockRelPositionInGrid.x*GRID, blockRelPositionInGrid.y*GRID);
+                blockAbsPosition = origin_global + sf::Vector2f(blockRelPositionInGrid.x*GRID, blockRelPositionInGrid.y*GRID);
                 blockSize = sf::Vector2f(blockSizeInGrid.x*GRID, blockSizeInGrid.y*GRID);
 
                 sf::Vector2f center = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2);
@@ -314,21 +331,22 @@ public:
                 }
             }
 
-            blocks[i].makeBlock( blockSize , blockAbsPosition, getPosition());
+            blocks[i].makeBlock( blockSize , blockAbsPosition);
         }
     }
 
 
     void update()
     {
-        sf::Vector2f worldAbsPosition = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2) - myRelPosition;
+        origin_global = sf::Vector2f(WINDOW_WIDTH/2, WINDOW_HEIGHT/2) - myRelPosition;
 
-        setPosition( worldAbsPosition );
-        grid.makeGrid( getPosition() );
+        setPosition( origin_global );
+
+        grid.makeGrid();
 
         for (short i=0; i<NUM_OF_BLOCKS; i++)
         {
-            blocks[i].updateBlock(getPosition());
+            blocks[i].updateBlock();
         }
     }
 
@@ -357,22 +375,24 @@ World world;
 
 class MiniWorld: public sf::RectangleShape
 {
-public:
+private:
 
     float scale_factor;
     Block miniBlocks[NUM_OF_BLOCKS];
     sf::CircleShape miniPlayers[TOTAL_PLAYERS];
 
+public:
+
+    float width;
 
     void miniPlayerInit()
     {
-
         for (int id=0; id < TOTAL_PLAYERS; id++)
         {
             miniPlayers[ id ].setRadius( PLAYER_RADIUS*scale_factor );
             miniPlayers[ id ].setFillColor( world.players[ id ].getFillColor() );
 
-            sf::Vector2f relPos = world.players[ id ].getPosition() - world.getPosition();
+            sf::Vector2f relPos = world.players[ id ].getPosition() - origin_global;
 
             miniPlayers[ id ].setPosition( getPosition() + sf::Vector2f( (relPos.x - PLAYER_RADIUS)*scale_factor, (relPos.y - PLAYER_RADIUS)*scale_factor) );
 
@@ -386,23 +406,22 @@ public:
     {
         float height = (float) WINDOW_HEIGHT/4;
         scale_factor = height/WORLD_HEIGHT;
-        float width = WORLD_WIDTH*scale_factor;
+        width = WORLD_WIDTH*scale_factor;
 
-        setFillColor(sf::Color(230, 130, 40));
+        setFillColor( worldColor );
         setPosition(WINDOW_WIDTH-width-30,30);
         setSize(sf::Vector2f(width,height));
-        setOutlineColor(sf::Color::Black);
+        setOutlineColor(sf::Color(190, 190, 190));
         setOutlineThickness(1);
 
 
-        for (int i=0; i<NUM_OF_BLOCKS; i++)
+        for (short i=0; i<NUM_OF_BLOCKS; i++)
         {
             miniBlocks[i].setSize(sf::Vector2f( world.blocks[i].getSize().x*scale_factor, world.blocks[i].getSize().y*scale_factor ));
 
-            sf::Vector2f relPos = world.blocks[i].relativePosition;
-            sf::Vector2f positionOfMiniBlockRelativeToMiniWorld = sf::Vector2f(relPos.x * scale_factor, relPos.y * scale_factor);
+            sf::Vector2f relPos = world.blocks[i].getRelativePosition();
 
-            miniBlocks[i].setPosition(getPosition() + positionOfMiniBlockRelativeToMiniWorld);
+            miniBlocks[ i ].setPosition( getPosition() +  sf::Vector2f(relPos.x*scale_factor, relPos.y*scale_factor) );
         }
     }
 
@@ -410,11 +429,11 @@ public:
 
     void update()
     {
-        for (int id=0; id < numOfPlayers; id++)
+        for (short id=0; id < numOfPlayers; id++)
         {
             sf::Vector2f relPos = world.players[ id ].getPosition() - world.getPosition();
 
-            miniPlayers[ id ].setPosition( getPosition() + sf::Vector2f( relPos.x*scale_factor, relPos.y*scale_factor) );
+            miniPlayers[ id ].setPosition( getPosition() + sf::Vector2f(relPos.x*scale_factor, relPos.y*scale_factor) );
         }
     }
 
@@ -427,7 +446,7 @@ public:
         {
             window.draw(miniBlocks[i]);
         }
-        for (int id=0; id < numOfPlayers; id++)
+        for (short id=0; id < numOfPlayers; id++)
         {
             window.draw(miniPlayers[ id ]);
         }
@@ -440,6 +459,8 @@ MiniWorld miniWorld(world);
 
 bool firstMessage = true;
 
+bool gameOver = false;
+std::string overMessage;
 
 void parse(char buffer[18*TOTAL_PLAYERS])
 {
@@ -453,13 +474,13 @@ void parse(char buffer[18*TOTAL_PLAYERS])
 
     if (  buffer[1] == 'F' && firstMessage  )
     {
+        firstMessage = false;
+
         myId = buffer[0] - '0';
         numOfPlayers = 1;
 
-        world.playerInit();
+        world.setPlayerColor();
         miniWorld.miniPlayerInit();
-
-        firstMessage = false;
     }
 
     if( buffer[1] != 'F' )
@@ -467,6 +488,28 @@ void parse(char buffer[18*TOTAL_PLAYERS])
         for( int i=0; i<numOfPlayers; i++)
         {
             id = buffer[index] - '0';
+
+            bool already_dead = 0;
+            for (int ho = 0; ho<numOfDeadPlayers; ho++)
+            {
+                if (id==deadPlayers[ho])
+                {
+                    already_dead = 1;
+                }
+            }
+
+            if (buffer[index+1] == 'L' && !already_dead)
+            {
+                index += 1;
+                deadPlayers[numOfDeadPlayers] = id;
+                numOfDeadPlayers++;
+                if (numOfDeadPlayers == numOfPlayers-1)
+                {
+                    overMessage = "YOU WON";
+                    gameOver = true;
+                }
+                break;
+            }
 
             if ( id+1 > numOfPlayers )
             {
@@ -553,14 +596,14 @@ void parse(char buffer[18*TOTAL_PLAYERS])
 
             index+=1;
 
-            //
+            // UPDATE
             if (id == myId)
             {
                 myRelPosition = sf::Vector2f( x, y );
             }
             else
             {
-                world.players[id].update( world.getPosition(), sf::Vector2f( x, y ) );
+                world.players[id].update( sf::Vector2f( x, y ) );
                 world.players[id].updateGunPosition();
             }
 
@@ -578,6 +621,13 @@ void parse(char buffer[18*TOTAL_PLAYERS])
                     world.players[ id ].bulletCount++;
                 }
             }
+
+            // WORLD
+            world.update();
+
+            // MINI WORLD
+            miniWorld.update();
+
             //
         }
     }
@@ -588,7 +638,7 @@ bool checkCollision(sf::Vector2f &p)
 {
     for (int i=0; i<NUM_OF_BLOCKS; i++)
     {
-        sf::Vector2f blockPosition = world.blocks[i].relativePosition;
+        sf::Vector2f blockPosition = world.blocks[i].getRelativePosition();
         sf::Vector2f blockSize = world.blocks[i].getSize();
 
         float x1 = blockPosition.x;
@@ -641,15 +691,9 @@ bool checkCollision(sf::Vector2f &p)
 }
 
 
-bool gameNotOver = true;
-std::string overMessage;
-
-
 void update(sf::TcpSocket* socketPtr)
 {
-    // std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-
-    while (gameNotOver)
+    while (!gameOver)
     {
         char buffer[18*TOTAL_PLAYERS];
         std::size_t received = 0;
@@ -658,17 +702,17 @@ void update(sf::TcpSocket* socketPtr)
         {
             parse(buffer);
 
-            if (!firstMessage)
+            if (!firstMessage && !gameOver)
             {
-                /// UPDATE EVERYTHING
+                /// UPDATE BULLETS
 
-                // GUN
-
-                for ( int id=0; id < numOfPlayers; id++)
+                for (char id=0; id < numOfPlayers; id++)
                 {
+                    // GUN
                     world.players[id].updateGunAngle( world.players[id].gunAngle );
 
-                    for(int i=world.players[ id ].bulletIndex; i < world.players[ id ].bulletIndex + world.players[ id ].bulletCount; i++)
+                    //BULLETS
+                    for(short i=world.players[ id ].bulletIndex; i < world.players[ id ].bulletIndex + world.players[ id ].bulletCount; i++)
                     {
                         if(i >= NUM_OF_BULLETS){ i = i - NUM_OF_BULLETS; }
 
@@ -714,7 +758,7 @@ void update(sf::TcpSocket* socketPtr)
                                 (
                                     distance
                                     (
-                                        bulletPosition + sf::Vector2f(3,3),
+                                        bulletPosition,
                                         world.players[ id2 ].getPosition() + sf::Vector2f(10,10)
                                     ) < 13
                                 )
@@ -727,18 +771,15 @@ void update(sf::TcpSocket* socketPtr)
                                     sf::Color c = world.players[id2].getFillColor();
                                     world.players[id2].setFillColor( sf::Color(c.r, c.g, c.b,(uint8_t) (255*world.players[id2].life)) );
 
-                                    if ( world.players[id2].life < 0 )
+                                    if ( id2 == myId && world.players[myId].life < 0 )
                                     {
-                                        if (id2 == myId)
-                                        {
-                                            overMessage = "YOU LOSE";
-                                        }
-                                        else
-                                        {
-                                            overMessage = "YOU WIN!";
-                                        }
+                                        overMessage = "YOU LOSE";
+                                        gameOver = true;
 
-                                        gameNotOver = false;
+                                        std::string s = "S";
+                                        s += "L";
+                                        s += "E";
+                                        socketPtr->send(s.c_str(), s.size() + 1);
                                     }
                                 }
                             }
@@ -762,16 +803,6 @@ void update(sf::TcpSocket* socketPtr)
                     }
                 }
             }
-
-            // MY RELATIVE POSITION
-            /* Already done in parse function */
-
-            // WORLD
-            world.update();
-
-            // MINI WORLD
-            miniWorld.update();
-
         }
     }
 }
@@ -781,7 +812,10 @@ void gamePlay(sf::RenderWindow &window, sf::TcpSocket &socket)
 {
     int click = 0;
 
-    while (window.isOpen() && gameNotOver)
+    // create own view
+    sf::View view = window.getDefaultView();
+
+    while (window.isOpen() && !gameOver)
     {
         sf::Event event;
         while (window.pollEvent(event))
@@ -792,6 +826,17 @@ void gamePlay(sf::RenderWindow &window, sf::TcpSocket &socket)
             if (event.type == sf::Event::Closed)
                 window.close();
 
+            if (event.type == sf::Event::Resized)
+            {
+                // resize my view
+                view.setSize({
+                    static_cast<float>(event.size.width),
+                    static_cast<float>(event.size.height)
+                });
+                window.setView(view);
+                // and align shape
+            }
+
             if (event.type == sf::Event::MouseButtonPressed)
             {
                 click=1;
@@ -800,7 +845,6 @@ void gamePlay(sf::RenderWindow &window, sf::TcpSocket &socket)
             {
                 click=0;
             }
-
 
             sf::Vector2f newRelativePosition = myRelPosition;
             if(event.type == sf::Event::KeyPressed)
@@ -866,13 +910,9 @@ void gamePlay(sf::RenderWindow &window, sf::TcpSocket &socket)
 
             s += "E";
             socket.send(s.c_str(), s.size() + 1);
-
-
-
         }
 
-
-        window.clear(sf::Color(50,50,50));
+        window.clear(sf::Color(120, 120, 120));
         world.drawOn(window);
 
         for (int id=0; id<numOfPlayers; id++)
@@ -881,10 +921,7 @@ void gamePlay(sf::RenderWindow &window, sf::TcpSocket &socket)
             {
                 if(i >= NUM_OF_BULLETS) { i = i - NUM_OF_BULLETS; }
 
-                if (i%5==0)
-                {
-                    window.draw(world.players[ id ].bullets[i]);
-                }
+                window.draw(world.players[ id ].bullets[i]);
             }
         }
         miniWorld.drawOn(window);
